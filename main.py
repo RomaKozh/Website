@@ -20,6 +20,13 @@ def load_user(user_id):
     return db_sess.query(User).get(user_id)
 
 
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect('/')
+
+
 @app.route('/')
 def index():
     db_sess = db_session.create_session()
@@ -49,7 +56,7 @@ def register():
         user = User(
             name=form.name.data,
             email=form.email.data,
-            avatar=form.avatar.data
+            avatar=form.avatar.object_data
         )
         user.set_password(form.password.data)
         db_sess.add(user)
