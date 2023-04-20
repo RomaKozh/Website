@@ -1,10 +1,12 @@
 from flask import Flask, redirect, render_template, request, make_response, session, jsonify
+import sqlite3
 from data import db_session
 from data.users import User
 from data.news import News
 from forms.register import RegisterForm
 from forms.login import LoginForm
 from forms.news import NewsForm
+import os
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
 
@@ -17,6 +19,7 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
+    read_blob_data(user_id)
     return db_sess.query(User).get(user_id)
 
 
@@ -53,10 +56,15 @@ def register():
         if db_sess.query(User).filter(User.name == form.name.data).first():
             return render_template('register.html', title='Регистрация',
                                    form=form, message='Это имя уже используется')
+        ava = form.avatar.data.read()
+        if not ava:
+            pass    # стандартное фото
+        else:
+            binary = sqlite3.Binary(ava)
         user = User(
             name=form.name.data,
             email=form.email.data,
-            avatar=form.avatar.object_data
+            avatar=binary
         )
         user.set_password(form.password.data)
         db_sess.add(user)
@@ -88,6 +96,25 @@ def profile():
 @app.route('/news')
 def news():
     return render_template('news.html')
+
+
+def write_to_file(data, filename):
+    with open(filename, 'wb') as file:
+        file.write(data)
+
+
+def read_blob_data(id):
+    sqlite_con = sqlite3.connect('db/website.db')
+    cur = sqlite_con.cursor()
+    sql_fetch_blob_query = """SELECT avatar from users where id = ?"""
+    cur.execute(sql_fetch_blob_query, (id, ))
+    record = cur.fetchall()
+    for row in record:
+        photo = row[4]
+    path = os.path.join('imgs', 'image.jpg')
+    write_to_file(photo, path)
+    cur.close()
+    sqlite_con.close()
 
 
 def main():
