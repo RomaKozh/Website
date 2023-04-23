@@ -1,10 +1,11 @@
-from flask import Flask, redirect, render_template, request, make_response, session, jsonify
+from flask import Flask, redirect, render_template, make_response, jsonify
 import sqlite3
 from data import db_session
 from data.users import User
 from data.news import News
 from forms.register import RegisterForm
 from forms.login import LoginForm
+from forms.edit_profile import EditForm
 from forms.news import NewsForm
 import os
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
@@ -33,7 +34,8 @@ def logout():
 @app.route('/')
 def index():
     db_sess = db_session.create_session()
-    news = db_sess.query(News)
+    news = db_sess.query(News).order_by(News.id.desc())
+    read_blob_data_news()
     return render_template('index.html', title='Главная', news=news)
 
 
@@ -93,9 +95,51 @@ def profile():
     return render_template('profile.html', title='Профиль')
 
 
-@app.route('/news')
-def news():
-    return render_template('news.html')
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        binary = sqlite3.Binary(form.avatar.data.read())
+        user = db_sess.query(User).filter(User.id == current_user.id).first()
+        user.set_name(form.name.data)
+        user.set_email(form.email.data)
+        user.set_avatar(binary)
+        db_sess.commit()
+        return render_template('edit.html', title='Редактирование профиля', form=form,
+                               message='Профиль успешно изменен')
+    return render_template('edit.html', title='Редактирование профиля', form=form)
+
+
+@app.route('/add_news', methods=['GET', 'POST'])
+@login_required
+def add_news():
+    form = NewsForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        binary = sqlite3.Binary(form.photo.data.read())
+        news = News(title=form.title.data,
+                    description=form.description.data,
+                    content=form.content.data,
+                    photo=binary)
+        current_user.news.append(news)
+        db_sess.merge(current_user)
+        db_sess.commit()
+        return render_template('add_news.html', message="Новость успешно создана", form=form)
+    return render_template('add_news.html', form=form)
+
+
+@app.route('/news/<title>/<int:id>')
+def news(title, id):
+    db_sess = db_session.create_session()
+    news_data = db_sess.query(News).filter(News.id == id).first()
+    if news_data.user:
+        return render_template('news.html', title=title, id=id, content=news_data.content,
+                               photo=news_data.photo,
+                               created_date=news_data.created_date, author=news_data.user.name)
+    return render_template('news.html', title=title, content=news_data.content,
+                           photo=news_data.photo, created_date=news_data.created_date)
 
 
 def write_to_file(data, filename):
@@ -109,10 +153,25 @@ def read_blob_data(id):
     sql_fetch_blob_query = """SELECT avatar from users where id = ?"""
     cur.execute(sql_fetch_blob_query, (id, ))
     record = cur.fetchall()
-    for row in record:
-        photo = row[4]
-    path = os.path.join('imgs', 'image.jpg')
-    write_to_file(photo, path)
+    path = os.path.join('images', 'avatar.jpg')
+    if record:
+        write_to_file(record[0][0], path)
+    cur.close()
+    sqlite_con.close()
+
+
+def read_blob_data_news():
+    sqlite_con = sqlite3.connect('db/website.db')
+    cur = sqlite_con.cursor()
+    sql_fetch_blob_query = """SELECT * from news"""
+    cur.execute(sql_fetch_blob_query)
+    record = cur.fetchall()
+    if record:
+        for row in record:
+            id = row[0]
+            photo = row[4]
+            path = os.path.join('images', str(id) + '.jpg')
+            write_to_file(photo, path)
     cur.close()
     sqlite_con.close()
 

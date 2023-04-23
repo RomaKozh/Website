@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 
-{%block content %}
+{% block content %}
 <h1>Новости</h1>
-<a href="news" class="btn btn-secondary">Добавить новость</a>
 {% for item in news %}
     <div class="col-lg4">
         <div>
             {{ item.created_date }} | {{ item.user.name }}
         </div>
-        <h2>{{ item.title }}</h2>
+        <div><img src="../images/{{ item.id }}.jpg"></div>
+        <a class="news_title" href="news/{{ item.title }}/{{ item.id }}"><h2>
+            {{ item.title }}</h2></a>
         <div>
             {{ item.description }}
         </div>

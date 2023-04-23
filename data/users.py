@@ -19,6 +19,16 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     created_date = sqlalchemy.Column(sqlalchemy.DateTime,
                                      default=datetime.datetime.now)
     avatar = sqlalchemy.Column(sqlalchemy.BLOB, nullable=True)
+    news = orm.relationship("News", back_populates='user')
+
+    def set_name(self, name):
+        self.name = name
+
+    def set_email(self, email):
+        self.email = email
+
+    def set_avatar(self, avatar):
+        self.avatar = avatar
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
