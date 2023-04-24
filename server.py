@@ -1,5 +1,6 @@
-from flask import Flask, redirect, render_template, make_response, jsonify
+from flask import Flask, redirect, render_template, make_response, jsonify, url_for, request
 import sqlite3
+import os
 from data import db_session
 from data.users import User
 from data.news import News
@@ -7,7 +8,6 @@ from forms.register import RegisterForm
 from forms.login import LoginForm
 from forms.edit_profile import EditForm
 from forms.news import NewsForm
-import os
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
 
@@ -31,12 +31,13 @@ def logout():
     return redirect('/')
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     db_sess = db_session.create_session()
     news = db_sess.query(News).order_by(News.id.desc())
     read_blob_data_news()
-    return render_template('index.html', title='Главная', news=news)
+    return render_template('index.html', title='Главная', news=news,
+                           avatar=url_for('static', filename='images/avatar.jpg'))
 
 
 @app.errorhandler(404)
@@ -60,7 +61,8 @@ def register():
                                    form=form, message='Это имя уже используется')
         ava = form.avatar.data.read()
         if not ava:
-            pass    # стандартное фото
+            standart_ava = open('static/images/standart.jpg', 'rb')
+            binary = sqlite3.Binary(standart_ava.read())
         else:
             binary = sqlite3.Binary(ava)
         user = User(
@@ -72,7 +74,8 @@ def register():
         db_sess.add(user)
         db_sess.commit()
         return render_template('register.html', title='Регистрация',
-                               form=form, message='Пользователь успешно создан')
+                               form=form, message='Пользователь успешно создан',
+                               avatar=url_for('static', filename='images/avatar.jpg'))
     return render_template('register.html', title='Регистрация', form=form)
 
 
@@ -92,7 +95,8 @@ def login():
 @app.route('/profile')
 @login_required
 def profile():
-    return render_template('profile.html', title='Профиль')
+    return render_template('profile.html', title='Профиль',
+                           avatar=url_for('static', filename='images/avatar.jpg'))
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
@@ -108,8 +112,10 @@ def edit_profile():
         user.set_avatar(binary)
         db_sess.commit()
         return render_template('edit.html', title='Редактирование профиля', form=form,
-                               message='Профиль успешно изменен')
-    return render_template('edit.html', title='Редактирование профиля', form=form)
+                               message='Профиль успешно изменен',
+                               avatar=url_for('static', filename='images/avatar.jpg'))
+    return render_template('edit.html', title='Редактирование профиля', form=form,
+                           avatar=url_for('static', filename='images/avatar.jpg'))
 
 
 @app.route('/add_news', methods=['GET', 'POST'])
@@ -126,8 +132,10 @@ def add_news():
         current_user.news.append(news)
         db_sess.merge(current_user)
         db_sess.commit()
-        return render_template('add_news.html', message="Новость успешно создана", form=form)
-    return render_template('add_news.html', form=form)
+        return render_template('add_news.html', message="Новость успешно создана", form=form,
+                               avatar=url_for('static', filename='images/avatar.jpg'))
+    return render_template('add_news.html', form=form,
+                           avatar=url_for('static', filename='images/avatar.jpg'))
 
 
 @app.route('/news/<title>/<int:id>')
@@ -137,9 +145,20 @@ def news(title, id):
     if news_data.user:
         return render_template('news.html', title=title, id=id, content=news_data.content,
                                photo=news_data.photo,
-                               created_date=news_data.created_date, author=news_data.user.name)
+                               created_date=news_data.created_date, author=news_data.user.name,
+                               avatar=url_for('static', filename='images/avatar.jpg'))
     return render_template('news.html', title=title, content=news_data.content,
-                           photo=news_data.photo, created_date=news_data.created_date)
+                           photo=news_data.photo, created_date=news_data.created_date,
+                           avatar=url_for('static', filename='images/avatar.jpg'))
+
+
+@app.route('/delete_news/<int:id>')
+def delete_news(id):
+    db_sess = db_session.create_session()
+    news = db_sess.query(News).filter(News.id == id).first()
+    db_sess.delete(news)
+    db_sess.commit()
+    redirect('/')
 
 
 def write_to_file(data, filename):
@@ -153,7 +172,7 @@ def read_blob_data(id):
     sql_fetch_blob_query = """SELECT avatar from users where id = ?"""
     cur.execute(sql_fetch_blob_query, (id, ))
     record = cur.fetchall()
-    path = os.path.join('images', 'avatar.jpg')
+    path = os.path.join('static/images', 'avatar.jpg')
     if record:
         write_to_file(record[0][0], path)
     cur.close()
@@ -170,7 +189,7 @@ def read_blob_data_news():
         for row in record:
             id = row[0]
             photo = row[4]
-            path = os.path.join('images', str(id) + '.jpg')
+            path = os.path.join('static/images', str(id) + '.jpg')
             write_to_file(photo, path)
     cur.close()
     sqlite_con.close()

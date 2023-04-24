@@ -19,6 +19,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     created_date = sqlalchemy.Column(sqlalchemy.DateTime,
                                      default=datetime.datetime.now)
     avatar = sqlalchemy.Column(sqlalchemy.BLOB, nullable=True)
+    admin = sqlalchemy.Column(sqlalchemy.BOOLEAN, default=False)
     news = orm.relationship("News", back_populates='user')
 
     def set_name(self, name):

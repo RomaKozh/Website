@@ -3,8 +3,9 @@
 {% block content %}
 <h1>Профиль</h1>
 <h3>{{ current_user.name }}</h3>
-<img src="../images/avatar.jpg">
 <h3>{{ current_user.email }}</h3>
+<img src="{{ avatar }}" alt="Фото профиля" height="200" width="200"> <br>
+<br>
 <a class="btn btn-danger" href="/logout">Выйти из аккаунта</a>
 <a href="add_news" class="btn btn-secondary">Добавить новость</a>
 <a href="edit_profile" class="btn btn-secondary">Редактировать профиль</a>

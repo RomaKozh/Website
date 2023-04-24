@@ -4,15 +4,17 @@
 <h1>Новости</h1>
 {% for item in news %}
     <div class="col-lg4">
+        <div><img class="news_images" src="/static/images/{{ item.id }}.jpg" alt="Фото новости" height="350" width="80%"></div>
         <div>
             {{ item.created_date }} | {{ item.user.name }}
         </div>
-        <div><img src="../images/{{ item.id }}.jpg"></div>
         <a class="news_title" href="news/{{ item.title }}/{{ item.id }}"><h2>
             {{ item.title }}</h2></a>
         <div>
             {{ item.description }}
         </div>
+        <br>
+        <br>
     </div>
 {% endfor %}
 {% endblock %}

@@ -3,6 +3,11 @@
 {% block content %}
 <h4>{{ created_date }} | {{ author }}</h4>
 <h1>{{ title }}</h1>
-<img src="../images/{{ id }}.jpg" alt="Фото">
+<img class="news_images" src="/static/images/{{ id }}.jpg" alt="Фото" height="350" width="80%">
+<br>
+<br>
 <h3>{{ content }}</h3>
+{% if current_user.admin == True %}
+    <a class="btn btn-danger" href="/delete_news/{{ id }}">Удалить запись</a>
+{% endif %}
 {% endblock %}
