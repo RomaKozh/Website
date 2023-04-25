@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h4>{{ created_date }} | {{ author }}</h4>
+<h4>{{ created_date }} | {{ author.name }}</h4>
 <h1>{{ title }}</h1>
 <img class="news_images" src="/static/images/{{ id }}.jpg" alt="Фото" height="350" width="80%">
 <br>
 <br>
 <h3>{{ content }}</h3>
-{% if current_user.admin == True %}
+{% if current_user.admin == True or current_user.id == author.id %}
     <a class="btn btn-danger" href="/delete_news/{{ id }}">Удалить запись</a>
+    <a class="btn btn-secondary" href="/edit_news/{{ id }}">Изменить запись</a>
 {% endif %}
 {% endblock %}

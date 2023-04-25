@@ -105,8 +105,13 @@ def edit_profile():
     form = EditForm()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
-        binary = sqlite3.Binary(form.avatar.data.read())
         user = db_sess.query(User).filter(User.id == current_user.id).first()
+        ava = form.avatar.data.read()
+        if not ava:
+            standart_ava = open('static/images/standart.jpg', 'rb')
+            binary = sqlite3.Binary(standart_ava.read())
+        else:
+            binary = sqlite3.Binary(ava)
         user.set_name(form.name.data)
         user.set_email(form.email.data)
         user.set_avatar(binary)
@@ -138,6 +143,33 @@ def add_news():
                            avatar=url_for('static', filename='images/avatar.jpg'))
 
 
+@app.route('/edit_news/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_news(id):
+    form = NewsForm()
+    db_sess = db_session.create_session()
+    news = db_sess.query(News).filter(News.id == id).first()
+    if form.validate_on_submit():
+        if news.user.id == current_user.id or current_user.admin is True:
+            binary = sqlite3.Binary(form.photo.data.read())
+            news.set_title(form.title.data)
+            news.set_description(form.description.data)
+            news.set_content(form.content.data)
+            news.set_photo(binary)
+            db_sess.commit()
+            return render_template('edit_news.html', form=form, title=news.title, photo=news.photo,
+                                   description=news.description, content=news.content,
+                                   message='Новость успешно изменена',
+                                   avatar=url_for('static', filename='images/avatar.jpg'))
+        return render_template('edit_news.html', form=form, title=news.title, photo=news.photo,
+                               description=news.description, content=news.content,
+                               message='Недостаточно прав',
+                               avatar=url_for('static', filename='images/avatar.jpg'))
+    return render_template('edit_news.html', form=form, title=news.title, photo=news.photo,
+                           description=news.description, content=news.content,
+                           avatar=url_for('static', filename='images/avatar.jpg'))
+
+
 @app.route('/news/<title>/<int:id>')
 def news(title, id):
     db_sess = db_session.create_session()
@@ -145,7 +177,7 @@ def news(title, id):
     if news_data.user:
         return render_template('news.html', title=title, id=id, content=news_data.content,
                                photo=news_data.photo,
-                               created_date=news_data.created_date, author=news_data.user.name,
+                               created_date=news_data.created_date, author=news_data.user,
                                avatar=url_for('static', filename='images/avatar.jpg'))
     return render_template('news.html', title=title, content=news_data.content,
                            photo=news_data.photo, created_date=news_data.created_date,
@@ -153,12 +185,14 @@ def news(title, id):
 
 
 @app.route('/delete_news/<int:id>')
+@login_required
 def delete_news(id):
     db_sess = db_session.create_session()
     news = db_sess.query(News).filter(News.id == id).first()
-    db_sess.delete(news)
-    db_sess.commit()
-    redirect('/')
+    if news.user.id == current_user.id or current_user.admin is True:
+        db_sess.delete(news)
+        db_sess.commit()
+    return redirect('/')
 
 
 def write_to_file(data, filename):
